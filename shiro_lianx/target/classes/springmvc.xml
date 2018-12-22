@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--配置springmvc创建容器时要扫描的包，注意业务层和持久层对象已经由spring配置文件扫描了，
+    所以，此处就不要在扫描了-->
+    <context:component-scan base-package="com.anshao.web.controller"></context:component-scan>
+
+    <mvc:resources mapping="/*" location="/" />
+
+    <!-- 开启注解springmvc的支持，其实就是替我们注入几个bean进到容器中。处理器映射器  处理器适配器等等 -->
+    <mvc:annotation-driven/>
+    <!-- 开启AOP注解 -->
+    <aop:config proxy-target-class="true" />
+    <bean class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <!-- 将securityManager注入进来 -->
+        <property name="securityManager" ref="securityManager" />
+
+    </bean>
+</beans>

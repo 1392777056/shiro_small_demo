@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager" />
+        <!-- 登录页面 -->
+        <property name="loginUrl" value="login.html" />
+        <!-- 未授权的页面 -->
+        <property name="unauthorizedUrl" value="403.html" />
+        <!-- 过滤器链-有先后顺序的从上往下 -->
+        <property name="filterChainDefinitions">
+            <value>
+                /login.html = anon
+                /user/login = anon
+                /user/testRoles = roles["admin","admin1"]
+                /user/testRoles1 = rolesOr["admin1"]
+                /* = authc
+            </value>
+        </property>
+        <!-- 配置自定义过滤器 -->
+        <property name="filters">
+            <util:map>
+                <entry key="rolesOr" value-ref="rolesOrFilter" />
+            </util:map>
+        </property>
+    </bean>
+
+    <bean class="com.anshao.web.filter.RolesOrFilter" id="rolesOrFilter" />
+
+    <!-- 创建securityManager对象 -->
+    <bean class="org.apache.shiro.web.mgt.DefaultWebSecurityManager" id="securityManager">
+        <property name="realm" ref="realm" />
+        <property name="sessionManager" ref="sessionManager" />
+        <property name="cacheManager" ref="cacheManager" />
+        <property name="rememberMeManager" ref="cookieRememberMeManager" />
+    </bean>
+
+    <!-- 创建自定义的realms对象 -->
+    <bean class="com.anshao.shiro.realm.CustomRealm" id="realm">
+        <property name="credentialsMatcher" ref="credentialsMatcher" />
+    </bean>
+
+    <!-- 加密 -->
+    <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher" id="credentialsMatcher">
+        <!-- 加密算法 -->
+        <property name="hashAlgorithmName" value="md5" />
+        <!-- 加密次数 -->
+        <property name="hashIterations" value="1" />
+    </bean>
+
+    <!-- session -->
+    <bean class="com.anshao.session.CustomSessionManager" id="sessionManager">
+        <property name="sessionDAO" ref="redisSessionDao" />
+        <property name="cacheManager" ref="cacheManager" />
+    </bean>
+
+    <bean class="com.anshao.session.RedisSessionDao" id="redisSessionDao" />
+
+    <bean class="com.anshao.cache.RedisCacheManager" id="cacheManager" />
+
+    <!-- 记住我 -->
+    <bean class="org.apache.shiro.web.mgt.CookieRememberMeManager" id="cookieRememberMeManager">
+        <property name="cookie" ref="cookie" />
+    </bean>
+    <bean class="org.apache.shiro.web.servlet.SimpleCookie" id="cookie">
+        <constructor-arg value="rememberMe" />
+        <property name="maxAge" value="2000000" />
+    </bean>
+
+    <!-- 配置spring创建容器时要扫描的包，并且希望排除掉控制器的注解，因为他有springmvc.xml赋值加载 -->
+    <context:component-scan base-package="com.anshao">
+        <!-- 排除Controller注解-->
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"></context:exclude-filter>
+    </context:component-scan>
+
+    <!-- 引入properties文件-->
+    <context:property-placeholder location="classpath:jdbcConfig.properties"></context:property-placeholder>
+
+    <!-- redis -->
+    <bean class="redis.clients.jedis.JedisPool" id="jedisPool">
+        <constructor-arg ref="jedisPoolConfig" />
+        <constructor-arg value="127.0.0.1" />
+        <constructor-arg value="6379" />
+    </bean>
+
+    <bean class="redis.clients.jedis.JedisPoolConfig" id="jedisPoolConfig"/>
+
+    <!-- 配置数据源 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"></property>
+        <property name="url" value="${jdbc.url}"></property>
+        <property name="username" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+    </bean>
+
+    <!-- 配置SqlSessionFactoryBean -->
+    <bean id="sqlSessionFactoryBean" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 注入数据源 -->
+        <property name="dataSource" ref="dataSource"></property>
+       <!-- <property name="mapperLocations" value="classpath:com/anshao/dao/*.xml"></property>-->
+        <property name="typeAliasesPackage" value="com.anshao.domain"></property>
+    </bean>
+
+    <!-- 配置dao接口扫描器 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 注入的是dao接口所在的包-->
+        <property name="basePackage" value="com.anshao.dao"></property>
+    </bean>
+
+</beans>
